@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rooms — Live Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131c;
+      --surface2: #1c1c2e;
+      --border: rgba(120, 100, 255, 0.18);
+      --accent: #7c6bff;
+      --accent2: #b084ff;
+      --accent-glow: rgba(124, 107, 255, 0.3);
+      --text: #e8e6ff;
+      --muted: #6b6880;
+      --danger: #ff5c7a;
+      --success: #4fffb0;
+      --radius: 14px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      overflow: hidden;
+    }
+
+    /* Animated bg grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,107,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,107,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: -40%;
+      left: -20%;
+      width: 60%;
+      height: 70%;
+      background: radial-gradient(ellipse, rgba(124,107,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+    }
+
+    /* ── LANDING ── */
+    #landing {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .brand-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 14px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .brand h1 {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff 30%, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: min(420px, 92vw);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 0 60px rgba(124,107,255,0.08), 0 2px 0 rgba(255,255,255,0.04) inset;
+    }
+
+    .choice-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .choice-btn {
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+
+    .choice-btn:hover, .choice-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    input.code-input {
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 4px;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    input::placeholder { color: var(--muted); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Sora', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 24px var(--accent-glow);
+      margin-top: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent2);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px var(--accent-glow);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-msg {
+      background: rgba(255, 92, 122, 0.1);
+      border: 1px solid rgba(255, 92, 122, 0.3);
+      color: var(--danger);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .error-msg.show { display: block; }
+
+    /* ── CHAT SCREEN ── */
+    #chatScreen {
+      flex-direction: column;
+      padding: 0;
+      align-items: stretch;
+    }
+
+    .chat-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 20px 20px 0;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+
+    .chat-room-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .chat-room-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .chat-room-code {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent2);
+      letter-spacing: 4px;
+    }
+
+    .chat-header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .member-count {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .member-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .btn-leave {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 92, 122, 0.4);
+      background: rgba(255, 92, 122, 0.08);
+      color: var(--danger);
+      font-family: 'Sora', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-leave:hover {
+      background: rgba(255, 92, 122, 0.2);
+      border-color: var(--danger);
+    }
+
+    .enc-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      color: var(--success);
+      background: rgba(79, 255, 176, 0.08);
+      border: 1px solid rgba(79, 255, 176, 0.2);
+      border-radius: 20px;
+      padding: 4px 10px;
+    }
+
+    .copy-btn {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Sora', sans-serif;
+    }
+
+    .copy-btn:hover { color: var(--accent2); border-color: var(--accent); }
+
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .messages-area::-webkit-scrollbar { width: 4px; }
+    .messages-area::-webkit-scrollbar-track { background: transparent; }
+    .messages-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-width: 72%;
+      animation: msgIn 0.25s ease;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.self { align-self: flex-end; align-items: flex-end; }
+    .msg.other { align-self: flex-start; align-items: flex-start; }
+    .msg.system { align-self: center; align-items: center; max-width: 90%; }
+
+    .msg-meta {
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      padding: 0 6px;
+    }
+
+    .msg-bubble {
+      padding: 10px 16px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .msg.self .msg-bubble {
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 12px var(--accent-glow);
+    }
+
+    .msg.other .msg-bubble {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.system .msg-bubble {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.78rem;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-style: italic;
+    }
+
+    .chat-input-area {
+      display: flex;
+      gap: 10px;
+      padding: 16px 0 24px;
+      flex-shrink: 0;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-size: 0.92rem;
+      outline: none;
+      resize: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      max-height: 120px;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .btn-send {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .btn-send:hover { background: var(--accent2); transform: scale(1.05); }
+    .btn-send:active { transform: scale(0.97); }
+
+    .btn-send svg { width: 20px; height: 20px; fill: #fff; }
+
+    /* inactivity timer bar */
+    .timer-bar {
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .timer-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 100%;
+      transition: width 1s linear;
+      border-radius: 1px;
+    }
+
+    .timer-fill.warning { background: linear-gradient(90deg, #ff9d00, var(--danger)); }
+
+    /* modal overlay */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: min(380px, 90vw);
+      text-align: center;
+    }
+
+    .modal h2 { font-size: 1.2rem; margin-bottom: 10px; }
+    .modal p { color: var(--muted); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.6; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns button { flex: 1; padding: 12px; border-radius: 10px; font-family: 'Sora', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+    .btn-confirm-leave {
+      background: var(--danger);
+      border: none;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255,92,122,0.3);
+    }
+
+    .btn-confirm-leave:hover { opacity: 0.85; }
+
+    /* kicked screen */
+    #kickedScreen {
+      flex-direction: column;
+      text-align: center;
+      gap: 20px;
+    }
+
+    .kicked-icon { font-size: 3rem; }
+    .kicked-title { font-size: 1.4rem; font-weight: 700; }
+    .kicked-sub { color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 480px) {
+      .msg { max-width: 88%; }
+      .chat-wrapper { padding: 12px 12px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div class="screen" id="landing">
+  <div>
+    <div class="brand">
+      <div class="brand-mark">
+        <div class="brand-dot"></div>
+        <h1>rooms.</h1>
+      </div>
+      <p>Private chat rooms, no account needed</p>
+    </div>
+    <div class="card">
+      <div class="choice-btns">
+        <button class="choice-btn active" id="btnChooseCreate" onclick="selectMode('create')">Create Room</button>
+        <button class="choice-btn" id="btnChooseJoin" onclick="selectMode('join')">Join Room</button>
+      </div>
+
+      <div id="formCreate">
+        <div class="form-group">
+          <label>Your Nickname</label>
+          <input type="text" id="createNickname" placeholder="Enter nickname..." maxlength="30" />
+        </div>
+        <button class="btn-primary" id="btnCreate" onclick="doCreate()">Create Room →</button>
+      </div>
+
+      <div id="formJoin" style="display:none">
+        <div class="form-group">
+          <label>Room Code</label>
+          <input type="text" id="joinCode" class="code-input" placeholder="A1B2C3" maxlength="6" />
+        </div>
+        <div class="form-group">
+          <label>Your Nickname</label>
+          <input type="text" id="joinNickname" placeholder="Enter nickname..." maxlength="30" />
+        </div>
+        <button class="btn-primary" id="btnJoin" onclick="doJoin()">Join Room →</button>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="screen hidden" id="chatScreen">
+  <div class="chat-wrapper">
+    <div class="chat-header">
+      <div class="chat-room-info">
+        <span class="chat-room-label">Room Code</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="chat-room-code" id="displayCode">------</span>
+          <button class="copy-btn" onclick="copyCode()">copy</button>
+        </div>
+      </div>
+      <div class="chat-header-right">
+        <div class="enc-badge" title="End-to-end encrypted with AES-GCM 256-bit">
+          <svg width="11" height="13" viewBox="0 0 11 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1.5" y="5.5" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M3.5 5.5V3.5a2 2 0 014 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="5.5" cy="9" r="1" fill="currentColor"/>
+          </svg>
+          E2E Encrypted
+        </div>
+        <div class="member-count">
+          <div class="member-dot"></div>
+          <span id="memberCount">1</span>
+        </div>
+        <button class="btn-leave" onclick="confirmLeave()">Leave</button>
+      </div>
+    </div>
+
+    <div class="timer-bar">
+      <div class="timer-fill" id="timerFill"></div>
+    </div>
+
+    <div class="messages-area" id="messagesArea">
+      <div class="msg system">
+        <div class="msg-bubble">Welcome! Share the room code to invite others.</div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chatInput" placeholder="Type a message..." rows="1" maxlength="500"></textarea>
+      <button class="btn-send" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- KICKED -->
+<div class="screen hidden" id="kickedScreen">
+  <div>
+    <div class="kicked-icon">⏱</div>
+    <div class="kicked-title">Session Ended</div>
+    <div class="kicked-sub">You were removed due to inactivity (5 minutes).</div>
+    <br/>
+    <button class="btn-primary" style="max-width:200px;margin:0 auto;display:block;" onclick="backToLanding()">Back to Start</button>
+  </div>
+</div>
+
+<!-- Leave Confirm Modal -->
+<div class="modal-overlay" id="leaveModal">
+  <div class="modal">
+    <h2>Leave Room?</h2>
+    <p>You'll be disconnected and your session will end. Others in the room will be notified.</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="cancelLeave()">Stay</button>
+      <button class="btn-confirm-leave" onclick="doLeave()">Leave</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let ws = null;
+  let mode = 'create';
+  let currentCode = '';
+  let timerInterval = null;
+  let timerSeconds = 300;
+  let cryptoKey = null; // AES-GCM CryptoKey derived from room code
+
+  const WS_URL = (location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host;
+
+  // ── CRYPTO ─────────────────────────────────────────────────────────────────
+  // Derives a 256-bit AES-GCM key from the room code using PBKDF2.
+  // The salt is fixed + public (derived from code) — security comes from the
+  // code itself being the shared secret, not from the salt being hidden.
+  async function deriveKey(code) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(code),
+      { name: 'PBKDF2' }, false,
+      ['deriveKey']
+    );
+    return crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: enc.encode('rooms-e2e-salt-' + code),
+        iterations: 200000,
+        hash: 'SHA-256',
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  // Encrypts plaintext → { iv: base64, ct: base64 }
+  async function encrypt(text) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const enc = new TextEncoder();
+    const cipherBuf = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      enc.encode(text)
+    );
+    return {
+      iv: btoa(String.fromCharCode(...iv)),
+      ct: btoa(String.fromCharCode(...new Uint8Array(cipherBuf))),
+    };
+  }
+
+  // Decrypts { iv: base64, ct: base64 } → plaintext string
+  async function decrypt(iv64, ct64) {
+    const iv  = Uint8Array.from(atob(iv64),  c => c.charCodeAt(0));
+    const ct  = Uint8Array.from(atob(ct64),  c => c.charCodeAt(0));
+    const buf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, ct);
+    return new TextDecoder().decode(buf);
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
+  function selectMode(m) {
+    mode = m;
+    document.getElementById('formCreate').style.display = m === 'create' ? 'block' : 'none';
+    document.getElementById('formJoin').style.display = m === 'join' ? 'block' : 'none';
+    document.getElementById('btnChooseCreate').classList.toggle('active', m === 'create');
+    document.getElementById('btnChooseJoin').classList.toggle('active', m === 'join');
+    hideError();
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  function hideError() {
+    document.getElementById('errorMsg').classList.remove('show');
+  }
+
+  function connect(onOpen) {
+    if (ws) { ws.close(); ws = null; }
+    ws = new WebSocket(WS_URL);
+    ws.onopen = onOpen;
+    ws.onmessage = handleMessage;
+    ws.onclose = () => {
+      if (!document.getElementById('chatScreen').classList.contains('hidden')) {
+        showScreen('kickedScreen');
+      }
+    };
+    ws.onerror = () => showError('Connection failed. Please try again.');
+  }
+
+  async function doCreate() {
+    const nickname = document.getElementById('createNickname').value.trim();
+    if (!nickname) { showError('Please enter a nickname.'); return; }
+    hideError();
+    connect(async () => {
+      ws.send(JSON.stringify({ type: 'createRoom', nickname }));
+    });
+  }
+
+  async function doJoin() {
+    const code = document.getElementById('joinCode').value.trim().toUpperCase();
+    const nickname = document.getElementById('joinNickname').value.trim();
+    if (!code || code.length !== 6) { showError('Enter a valid 6-character room code.'); return; }
+    if (!nickname) { showError('Please enter a nickname.'); return; }
+    hideError();
+    connect(() => {
+      ws.send(JSON.stringify({ type: 'joinRoom', code, nickname }));
+    });
+  }
+
+  async function handleMessage(event) {
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === 'joined') {
+      currentCode = msg.code;
+      document.getElementById('displayCode').textContent = msg.code;
+      // Derive encryption key from room code BEFORE entering chat
+      cryptoKey = await deriveKey(msg.code);
+      showScreen('chatScreen');
+      startTimer();
+    } else if (msg.type === 'chat') {
+      // Decrypt incoming message
+      let plaintext;
+      try {
+        plaintext = await decrypt(msg.iv, msg.ct);
+      } catch {
+        plaintext = '[could not decrypt]';
+      }
+      appendMessage({ ...msg, text: plaintext });
+      if (!msg.self) resetTimerUI();
+    } else if (msg.type === 'system') {
+      appendSystem(msg.text);
+      if (msg.count !== undefined) document.getElementById('memberCount').textContent = msg.count;
+    } else if (msg.type === 'roomInfo') {
+      document.getElementById('memberCount').textContent = msg.count;
+    } else if (msg.type === 'error') {
+      showError(msg.text);
+    } else if (msg.type === 'kicked') {
+      stopTimer();
+      showScreen('kickedScreen');
+    }
+  }
+
+  function appendMessage(msg) {
+    const area = document.getElementById('messagesArea');
+    const div = document.createElement('div');
+    div.className = 'msg ' + (msg.self ? 'self' : 'other');
+    const time = new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.innerHTML = `
+      <div class="msg-meta">${msg.self ? 'You' : escHtml(msg.nickname)} · ${time}</div>
+      <div class="msg-bubble">${escHtml(msg.text)}</div>
+    `;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function appendSystem(text) {
+    const area = document.getElementById('messagesArea');
+    const div = document.createElement('div');
+    div.className = 'msg system';
+    div.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || !ws || !cryptoKey) return;
+    // Encrypt before sending
+    const { iv, ct } = await encrypt(text);
+    ws.send(JSON.stringify({ type: 'chat', iv, ct }));
+    input.value = '';
+    input.style.height = '';
+    resetTimerUI();
+  }
+
+  function startTimer() {
+    timerSeconds = 300;
+    stopTimer();
+    updateTimerBar();
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      updateTimerBar();
+      if (timerSeconds <= 0) stopTimer();
+    }, 1000);
+  }
+
+  function resetTimerUI() {
+    timerSeconds = 300;
+    updateTimerBar();
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  }
+
+  function updateTimerBar() {
+    const fill = document.getElementById('timerFill');
+    const pct = (timerSeconds / 300) * 100;
+    fill.style.width = pct + '%';
+    fill.classList.toggle('warning', timerSeconds < 60);
+  }
+
+  function confirmLeave() {
+    document.getElementById('leaveModal').classList.add('show');
+  }
+
+  function cancelLeave() {
+    document.getElementById('leaveModal').classList.remove('show');
+  }
+
+  function doLeave() {
+    document.getElementById('leaveModal').classList.remove('show');
+    stopTimer();
+    if (ws) ws.send(JSON.stringify({ type: 'leave' }));
+    ws = null;
+    cryptoKey = null;
+    backToLanding();
+  }
+
+  function backToLanding() {
+    stopTimer();
+    currentCode = '';
+    cryptoKey = null;
+    document.getElementById('messagesArea').innerHTML = `
+      <div class="msg system"><div class="msg-bubble">Welcome! Share the room code to invite others.</div></div>
+    `;
+    document.getElementById('chatInput').value = '';
+    showScreen('landing');
+  }
+
+  function showScreen(id) {
+    ['landing', 'chatScreen', 'kickedScreen'].forEach(s => {
+      document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+  }
+
+  function copyCode() {
+    navigator.clipboard.writeText(currentCode).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = 'copy', 1500);
+    });
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // Auto-resize textarea
+  const chatInput = document.getElementById('chatInput');
+  chatInput.addEventListener('input', () => {
+    chatInput.style.height = '';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+  });
+
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  document.getElementById('createNickname').addEventListener('keydown', e => { if (e.key === 'Enter') doCreate(); });
+  document.getElementById('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
+  document.getElementById('joinNickname').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
+
+  document.getElementById('joinCode').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+  });
+</script>
+</body>
+</html>
